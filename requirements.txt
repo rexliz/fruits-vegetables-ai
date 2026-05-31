@@ -1,0 +1,15 @@
+pandas
+numpy
+matplotlib
+seaborn
+scikit-learn
+kagglehub
+datasets
+transformers
+torch
+torchvision
+openai
+gradio
+pillow
+joblib
+
