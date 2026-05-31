@@ -3,7 +3,6 @@ numpy
 matplotlib
 seaborn
 scikit-learn
-kagglehub
 datasets
 transformers
 torch
@@ -12,4 +11,6 @@ openai
 gradio
 pillow
 joblib
+python-dotenv
+requests
 
