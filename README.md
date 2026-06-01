@@ -1,3 +1,14 @@
+---
+title: Smart Nutrition Advisor
+emoji: 🍎
+colorFrom: green
+colorTo: yellow
+sdk: gradio
+sdk_version: "4.44.1"
+app_file: app.py
+pinned: false
+---
+
 # 🍎🥦 Smart Nutrition Advisor – Fruits & Vegetables AI
 
 A smart nutrition advisor that identifies fruits & vegetables from photos and provides personalized nutrition advice.
