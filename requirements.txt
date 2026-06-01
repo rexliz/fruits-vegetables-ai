@@ -3,13 +3,12 @@ numpy
 matplotlib
 seaborn
 scikit-learn
-datasets
 transformers
 torch
 torchvision
-openai
-gradio
-pillow
+openai>=1.0.0
+gradio>=4.0.0
+Pillow
 joblib
 python-dotenv
 requests
