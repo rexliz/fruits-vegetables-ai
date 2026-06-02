@@ -2,56 +2,31 @@
 title: Smart Nutrition Advisor
 emoji: 🍎
 colorFrom: green
-colorTo: yellow
+colorTo: red
 sdk: gradio
-sdk_version: "4.44.1"
-python_version: "3.11"
+sdk_version: 5.20.0
 app_file: app.py
 pinned: false
 ---
-
-# 🍎🥦 Smart Nutrition Advisor – Fruits & Vegetables AI
-
-A smart nutrition advisor that identifies fruits & vegetables from photos and provides personalized nutrition advice.
-
-## 🎯 Use Case
-📸 Upload a photo → 🖼️ CV identifies food → 📊 ML predicts calories → 💬 NLP generates recipe & health tips
-
-## 🔗 AI Blocks
-| Block | Technology | Task |
-|-------|-----------|------|
-| **CV** | CLIP (Zero-Shot) | Classify fruit/vegetable from image |
-| **ML** | Ridge Regression (R²=0.97) | Predict calories per 100g |
-| **NLP** | GPT-4o-mini | Generate recipes & health advice |
-
-## 🚀 Links
-- **GitHub:** https://github.com/rexliz/fruits-vegetables-ai
-- **HF Space:** https://huggingface.co/spaces/rexheliz/fruits-vegetables-nutrition-advisor
-
-## 📦 Dataset
-- USDA Nutritional Data (nutrition.csv, 332 items after cleaning)
-
-## ▶️ How to Run
-```bash
-# Install dependencies
-pip install -r requirements.txt
-
-# Create .env file with your OpenAI API key
-echo "OPENAI_API_KEY=your_key_here" > .env
-
-# Run notebooks in order (1 → 2 → 3 → 4)
-
-# Run Gradio App
-cd app
-python app.py
-```
-
-## 📁 Structure
-```
-1_eda/          → EDA + data cleaning
-2_ml_model/     → Calorie prediction model
-3_cv/           → CLIP Zero-Shot classification
-4_nlp/          → GPT-4o-mini recipe advisor
-app/            → Gradio web app
-data/           → nutrition.csv + generated artifacts
-```
+ 
+# 🍎🥦 Smart Nutrition Advisor (CV + ML + NLP)
+ 
+Upload a photo of a fruit or vegetable and get instant AI-powered nutrition advice.
+ 
+This Space combines three AI blocks into one integrated application:
+- 🔍 **Computer Vision (CLIP):** Identifies the food type using Zero-Shot classification
+- 📊 **Machine Learning (Ridge Regression):** Predicts calories from macronutrients
+- 💬 **NLP (GPT-4o-mini):** Generates a personalized recipe & health advice
+## How it works
+1. **CV block** detects the food from the uploaded image (e.g. "apple", 94%)
+2. The detected label is used to look up macronutrients, which feed the **ML block**
+3. The ML-predicted calories plus the food type are passed to the **NLP block**, which explains the result and suggests a recipe
+## Required files
+- `app.py`
+- `requirements.txt`
+- `best_model.pkl`
+- `scaler.pkl`
+- `nutrition_lookup.json`
+- `apple.jpg`, `banana.jpg`, `broccoli.jpg`, `carrot.jpg`
+## Configuration
+The app expects an `OPENAI_API_KEY` set as a Secret in the Space settings.
