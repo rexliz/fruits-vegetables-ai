@@ -8,10 +8,11 @@ from openai import OpenAI
 from PIL import Image
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(BASE_DIR, "data")
+BASE_DIR  = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR  = os.path.join(BASE_DIR, "data")
+IMAGE_DIR = os.path.join(BASE_DIR, "app", "example_images")
 
-# ── Load models ──────────────────────────────────────────────────────────────
+# ── Load models ───────────────────────────────────────────────────────────────
 print("Loading CLIP model...")
 clip_classifier = pipeline(
     model="openai/clip-vit-base-patch32",
@@ -37,33 +38,49 @@ FRUIT_LABELS = [
 
 # ── Functions ─────────────────────────────────────────────────────────────────
 def predict_calories(protein, fat, carbs, fiber, category_code=0):
-    fat_x_carbs = fat * carbs
-    features = np.array([[protein, fat, carbs, fiber, category_code, fat_x_carbs]])
+    fat_x_carbs     = fat * carbs
+    features        = np.array([[protein, fat, carbs, fiber, category_code, fat_x_carbs]])
     features_scaled = scaler.transform(features)
     return round(ml_model.predict(features_scaled)[0], 1)
 
 
 def generate_advice(food_label, calories, protein, fat, carbs, fiber):
-    prompt = f"""You are a professional nutritionist and chef.
+    """Iteration 3 prompt: system message + grounding + strict format + temperature 0.3"""
+    system_msg = (
+        "You are a certified nutritionist and chef. "
+        "Always base your nutritional advice strictly on the values provided. "
+        "Do not invent or estimate nutritional data. "
+        "Be concise, factual, and practical."
+    )
+    user_msg = f"""The AI system detected: {food_label}
 
-A user uploaded an image and the AI detected: **{food_label}**
+Measured nutritional values per 100g:
+- Calories: {calories} kcal
+- Protein: {protein}g | Fat: {fat}g | Carbohydrates: {carbs}g | Fiber: {fiber}g
 
-Nutritional values per 100g:
-- Calories: {calories} kcal (predicted by ML model)
-- Protein: {protein}g | Fat: {fat}g | Carbs: {carbs}g | Fiber: {fiber}g
+Respond EXACTLY in this format:
 
-Please provide:
-1. **Health Benefits** (2-3 sentences)
-2. **Best Recipe** (1 simple recipe, max 5 steps)
-3. **Serving Tip** (1 short tip)
+HEALTH BENEFITS:
+[2 evidence-based sentences referencing the values above]
 
-Keep it friendly and concise."""
+RECIPE: [Name]
+Ingredients: [max 5 items]
+Steps:
+1. [step]
+2. [step]
+3. [step]
+
+SERVING TIP:
+[1 practical tip]"""
 
     response = openai_client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[{"role": "user", "content": prompt}],
+        messages=[
+            {"role": "system", "content": system_msg},
+            {"role": "user",   "content": user_msg}
+        ],
         max_tokens=400,
-        temperature=0.7
+        temperature=0.3
     )
     return response.choices[0].message.content
 
@@ -73,23 +90,29 @@ def analyze_food(image):
         return "No image provided", "", "", ""
 
     # ── Block 1: CV ───────────────────────────────────────────────────────────
-    results = clip_classifier(image, candidate_labels=ALL_LABELS)
-    top3 = results[:3]
+    results    = clip_classifier(image, candidate_labels=ALL_LABELS)
+    top3       = results[:3]
     food_label = top3[0]["label"]
     confidence = top3[0]["score"]
 
     cv_output  = f"🔍 **Detected:** {food_label.capitalize()} ({confidence*100:.1f}%)\n\n"
     cv_output += "**Top 3 predictions:**\n"
     for r in top3:
-        cv_output += f"- {r['label']}: {r['score']*100:.1f}%\n"
+        cv_output += f"- {r['label'].capitalize()}: {r['score']*100:.1f}%\n"
     cv_output += f"\n**Type:** {'🍎 Fruit' if food_label in FRUIT_LABELS else '🥦 Vegetable'}"
+    if confidence < 0.70:
+        cv_output += "\n\n⚠️ *Low confidence — result may be unreliable*"
 
     # ── Block 2: ML ───────────────────────────────────────────────────────────
-    nutrition = NUTRITION_LOOKUP.get(food_label, {"protein": 1.0, "fat": 0.2, "carbs": 10.0, "fiber": 2.0})
+    nutrition = NUTRITION_LOOKUP.get(
+        food_label,
+        {"protein": 1.0, "fat": 0.2, "carbs": 10.0, "fiber": 2.0}
+    )
     category_code = 0 if food_label in FRUIT_LABELS else 1
     calories = predict_calories(
         nutrition["protein"], nutrition["fat"],
-        nutrition["carbs"], nutrition["fiber"], category_code
+        nutrition["carbs"],   nutrition["fiber"],
+        category_code
     )
 
     ml_output  = f"📊 **Predicted Calories:** {calories} kcal / 100g\n\n"
@@ -103,10 +126,13 @@ def analyze_food(image):
     nlp_output = generate_advice(
         food_label, calories,
         nutrition["protein"], nutrition["fat"],
-        nutrition["carbs"], nutrition["fiber"]
+        nutrition["carbs"],   nutrition["fiber"]
     )
 
-    summary = f"✅ **{food_label.capitalize()}** detected with {confidence*100:.1f}% confidence → {calories} kcal/100g"
+    summary = (
+        f"✅ **{food_label.capitalize()}** detected with "
+        f"{confidence*100:.1f}% confidence → {calories} kcal/100g"
+    )
 
     return cv_output, ml_output, nlp_output, summary
 
@@ -116,9 +142,9 @@ with gr.Blocks(title="🍎 Smart Nutrition Advisor") as demo:
     gr.Markdown("""
     # 🍎🥦 Smart Nutrition Advisor
     Upload a photo of a fruit or vegetable and get instant AI-powered nutrition advice!
-    - 🔍 **CV (CLIP):** Identifies the food type
-    - 📊 **ML (Ridge Regression):** Predicts calories & nutrition
-    - 💬 **NLP (GPT-4o-mini):** Generates recipe & health advice
+    - 🔍 **CV (CLIP):** Identifies the food type using Zero-Shot classification
+    - 📊 **ML (Ridge Regression):** Predicts calories from macronutrients
+    - 💬 **NLP (GPT-4o-mini):** Generates a personalized recipe & health advice
     """)
 
     with gr.Row():
@@ -142,14 +168,13 @@ with gr.Blocks(title="🍎 Smart Nutrition Advisor") as demo:
 
     gr.Examples(
         examples=[
-            ["app/example_images/apple.jpg"],
-            ["app/example_images/banana.jpg"],
-            ["app/example_images/broccoli.jpg"],
-            ["app/example_images/carrot.jpg"],
+            [os.path.join(IMAGE_DIR, "apple.jpg")],
+            [os.path.join(IMAGE_DIR, "banana.jpg")],
+            [os.path.join(IMAGE_DIR, "broccoli.jpg")],
+            [os.path.join(IMAGE_DIR, "carrot.jpg")],
         ],
         inputs=image_input,
         label="🖼️ Example Images"
     )
 
 demo.launch()
-
